@@ -18,7 +18,7 @@ export default function Layout() {
       <Tabs.Screen
         name="counter"
         options={{
-          title: "Counter",
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Feather name="clock" size={size} color={color} />
           ),
