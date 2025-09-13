@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Alert,
   StyleSheet,
@@ -9,14 +10,15 @@ import {
 } from "react-native";
 import { theme } from "../theme";
 import AntDesign from "@expo/vector-icons/AntDesign";
-import { useState } from "react";
+import Entypo from "@expo/vector-icons/Entypo";
 
 type Props = {
   id: string;
   name: string;
   isCompleted?: boolean;
   handleDelete: (id: string) => void;
-  handleUpdate: (id: string, name: string, isCompleted?: boolean) => void;
+  handleUpdate: (id: string, name: string) => void;
+  onToggleComplete: (id: string) => void;
 };
 
 export default function ShoppingListItem({
@@ -25,6 +27,7 @@ export default function ShoppingListItem({
   isCompleted,
   handleDelete,
   handleUpdate,
+  onToggleComplete,
 }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(name);
@@ -37,7 +40,7 @@ export default function ShoppingListItem({
 
   const onSave = () => {
     if (editedName.trim()) {
-      handleUpdate(id, editedName.trim(), isCompleted);
+      handleUpdate(id, editedName.trim());
       setIsEditing(false);
     }
   };
@@ -59,28 +62,41 @@ export default function ShoppingListItem({
   return (
     <Pressable
       style={[styles.itemContainer, isCompleted && styles.completedContainer]}
+      onPress={() => onToggleComplete(id)}
     >
-      {isEditing ? (
-        <TextInput
-          style={[styles.input, isCompleted && styles.completedText]}
-          value={editedName}
-          onChangeText={setEditedName}
-          onSubmitEditing={onSave}
-          onBlur={onSave}
-          autoFocus
-          selectTextOnFocus
+      <View style={styles.nameContainer}>
+        <Entypo
+          name={isCompleted ? "check" : "circle"}
+          size={24}
+          color={isCompleted ? theme.colorGray : theme.colorCerulean}
         />
-      ) : (
-        <Text style={[styles.itemText, isCompleted && styles.completedText]}>
-          {name}
-        </Text>
-      )}
+        {isEditing ? (
+          <TextInput
+            numberOfLines={1}
+            style={[styles.itemText, isCompleted && styles.completedText]}
+            value={editedName}
+            onChangeText={setEditedName}
+            onSubmitEditing={onSave}
+            onBlur={onSave}
+            autoFocus
+            selectTextOnFocus
+          />
+        ) : (
+          <Text
+            style={[styles.itemText, isCompleted && styles.completedText]}
+            numberOfLines={1}
+          >
+            {name}
+          </Text>
+        )}
+      </View>
       <View style={styles.buttonContainer}>
         {!isEditing && (
           <TouchableOpacity
             onPress={onEdit}
             activeOpacity={0.8}
-            style={styles.button}
+            style={styles.editButton}
+            hitSlop={10}
           >
             <AntDesign
               name="edit"
@@ -89,7 +105,7 @@ export default function ShoppingListItem({
             />
           </TouchableOpacity>
         )}
-        <TouchableOpacity onPress={onDelete} activeOpacity={0.8}>
+        <TouchableOpacity onPress={onDelete} activeOpacity={0.8} hitSlop={10}>
           <AntDesign
             name="close-circle"
             size={24}
@@ -118,6 +134,7 @@ const styles = StyleSheet.create({
   itemText: {
     fontSize: 18,
     fontWeight: "200",
+    flex: 1,
   },
   completedText: {
     textDecorationLine: "line-through",
@@ -126,14 +143,15 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 20,
+    gap: 12,
   },
-  input: {
+  nameContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     flex: 1,
-    fontSize: 18,
-    fontWeight: "200",
   },
-  button: {
+  editButton: {
     padding: 8,
   },
 });

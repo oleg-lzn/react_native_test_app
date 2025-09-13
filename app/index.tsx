@@ -8,6 +8,7 @@ type ShoppingListItemType = {
   id: string;
   name: string;
   isCompleted: boolean;
+  completedAtTimestamp?: number;
 };
 
 const initialItems: ShoppingListItemType[] = [
@@ -36,17 +37,28 @@ export default function App() {
     setShoppingListItems(prev => prev.filter(item => item.id !== id));
   }, []);
 
-  const handleUpdate = useCallback(
-    (id: string, name: string, isCompleted?: boolean) => {
-      setShoppingListItems(prevItem =>
-        prevItem.map(item =>
-          item.id === id
-            ? { ...item, name, isCompleted: isCompleted ?? false }
-            : item
-        )
-      );
+  const handleUpdate = useCallback((id: string, name: string) => {
+    setShoppingListItems(prevItem =>
+      prevItem.map(item => (item.id === id ? { ...item, name } : item))
+    );
+  }, []);
+
+  const handleToggleComplete = useCallback(
+    (id: string) => {
+      const newShoppingList = shoppingListItems.map(item => {
+        if (item.id === id) {
+          return {
+            ...item,
+            completedAtTimestamp: item.completedAtTimestamp
+              ? undefined
+              : Date.now(),
+          };
+        }
+        return item;
+      });
+      setShoppingListItems(newShoppingList);
     },
-    []
+    [shoppingListItems]
   );
 
   return (
@@ -78,9 +90,10 @@ export default function App() {
         <ShoppingListItem
           id={item.id}
           name={item.name}
-          isCompleted={item.isCompleted}
+          isCompleted={Boolean(item.completedAtTimestamp)}
           handleDelete={handleDelete}
           handleUpdate={handleUpdate}
+          onToggleComplete={handleToggleComplete}
         />
       )}
     />
@@ -91,7 +104,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colorWhite,
-    padding: 12,
+    paddingVertical: 12,
   },
   emptyContainer: {
     justifyContent: "center",
