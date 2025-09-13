@@ -1,47 +1,74 @@
 import { StyleSheet, TextInput, FlatList, Text, View } from "react-native";
 import { theme } from "../theme";
 import ShoppingListItem from "../components/ShoppingListItem";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import uuid from "react-native-uuid";
+import { getFromStorage, saveToStorage } from "../utils/asyncstorage";
 
 type ShoppingListItemType = {
   id: string;
   name: string;
   isCompleted: boolean;
   completedAtTimestamp?: number;
+  lastUpdatedTimestamp?: number;
 };
 
-const initialItems: ShoppingListItemType[] = [
-  { id: uuid.v4() as string, name: "Coffee", isCompleted: false },
-  { id: uuid.v4() as string, name: "Tea", isCompleted: false },
-  { id: uuid.v4() as string, name: "Sugar", isCompleted: false },
-];
+const STORAGE_KEY = "shopping-list";
 
 export default function App() {
   const [value, setValue] = useState<string>("");
   const [shoppingListItems, setShoppingListItems] =
     useState<ShoppingListItemType[]>(initialItems);
 
+  useEffect(() => {
+    const fetchShoppingList = async () => {
+      const data = await getFromStorage<ShoppingListItemType[]>(STORAGE_KEY);
+      if (data) {
+        setShoppingListItems(data);
+      }
+    };
+    fetchShoppingList();
+  }, []);
+
   const handleSubmit = useCallback(() => {
     if (value) {
       const newShoppingList = [
-        { id: uuid.v4() as string, name: value, isCompleted: false },
+        {
+          id: uuid.v4() as string,
+          name: value,
+          isCompleted: false,
+          lastUpdatedTimestamp: Date.now(),
+        },
         ...shoppingListItems,
       ];
       setShoppingListItems(newShoppingList);
+      saveToStorage(STORAGE_KEY, newShoppingList);
       setValue("");
     }
-  }, [value]);
+  }, [value, shoppingListItems]);
 
-  const handleDelete = useCallback((id: string) => {
-    setShoppingListItems(prev => prev.filter(item => item.id !== id));
-  }, []);
+  const handleDelete = useCallback(
+    (id: string) => {
+      const newShoppingList = shoppingListItems.filter(item => item.id !== id);
+      setShoppingListItems(newShoppingList);
+      saveToStorage(STORAGE_KEY, newShoppingList);
+    },
+    [shoppingListItems]
+  );
 
-  const handleUpdate = useCallback((id: string, name: string) => {
-    setShoppingListItems(prevItem =>
-      prevItem.map(item => (item.id === id ? { ...item, name } : item))
-    );
-  }, []);
+  const handleUpdate = useCallback(
+    (id: string, name: string) => {
+      setShoppingListItems(prevItem =>
+        prevItem.map(item =>
+          item.id === id
+            ? { ...item, name, lastUpdatedTimestamp: Date.now() }
+            : item
+        )
+      );
+      saveToStorage(STORAGE_KEY, shoppingListItems);
+    },
+    [shoppingListItems]
+  );
 
   const handleToggleComplete = useCallback(
     (id: string) => {
@@ -52,18 +79,20 @@ export default function App() {
             completedAtTimestamp: item.completedAtTimestamp
               ? undefined
               : Date.now(),
+            lastUpdatedTimestamp: Date.now(),
           };
         }
         return item;
       });
       setShoppingListItems(newShoppingList);
+      saveToStorage(STORAGE_KEY, newShoppingList);
     },
     [shoppingListItems]
   );
 
   return (
     <FlatList
-      data={shoppingListItems}
+      data={orderShoppingList(shoppingListItems)}
       stickyHeaderIndices={[0]}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
@@ -98,6 +127,30 @@ export default function App() {
       )}
     />
   );
+}
+
+const initialItems: ShoppingListItemType[] = [];
+
+function orderShoppingList(shoppingList: ShoppingListItemType[]) {
+  return shoppingList.sort((item1, item2) => {
+    if (item1.completedAtTimestamp && item2.completedAtTimestamp) {
+      return item2.completedAtTimestamp - item1.completedAtTimestamp;
+    }
+
+    if (item1.completedAtTimestamp && !item2.completedAtTimestamp) {
+      return 1;
+    }
+
+    if (!item1.completedAtTimestamp && item2.completedAtTimestamp) {
+      return -1;
+    }
+
+    if (!item1.completedAtTimestamp && !item2.completedAtTimestamp) {
+      return item2.lastUpdatedTimestamp - item1.lastUpdatedTimestamp;
+    }
+
+    return 0;
+  });
 }
 
 const styles = StyleSheet.create({
