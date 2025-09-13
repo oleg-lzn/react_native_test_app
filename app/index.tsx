@@ -1,7 +1,7 @@
 import { StyleSheet, TextInput, FlatList, Text, View } from "react-native";
 import { theme } from "../theme";
 import ShoppingListItem from "../components/ShoppingListItem";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import uuid from "react-native-uuid";
 
 type ShoppingListItemType = {
@@ -36,6 +36,19 @@ export default function App() {
     setShoppingListItems(prev => prev.filter(item => item.id !== id));
   }, []);
 
+  const handleUpdate = useCallback(
+    (id: string, name: string, isCompleted?: boolean) => {
+      setShoppingListItems(prevItem =>
+        prevItem.map(item =>
+          item.id === id
+            ? { ...item, name, isCompleted: isCompleted ?? false }
+            : item
+        )
+      );
+    },
+    []
+  );
+
   return (
     <FlatList
       data={shoppingListItems}
@@ -67,6 +80,7 @@ export default function App() {
           name={item.name}
           isCompleted={item.isCompleted}
           handleDelete={handleDelete}
+          handleUpdate={handleUpdate}
         />
       )}
     />
