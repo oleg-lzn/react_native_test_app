@@ -29,7 +29,7 @@ export type PersistedCountdownState = {
 };
 
 // 2 weeks from now
-const frequency = 60 * 60 * 24 * 14 * 1000;
+const frequency = 14 * 24 * 60 * 60 * 1000;
 export const COUNTDOWN_STORAGE_KEY = "taskly-countdown";
 
 export default function CounterScreen() {
@@ -133,7 +133,7 @@ export default function CounterScreen() {
       )}
       <View style={styles.timeContainer}>
         <TimeSegment
-          number={status.distance.hours ?? 0}
+          number={status.distance.days ?? 0}
           unit="days"
           textStyle={status.isOverdue ? styles.whiteText : undefined}
         />
