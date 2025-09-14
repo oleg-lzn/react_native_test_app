@@ -25,7 +25,7 @@ export default function HistoryScreen() {
       data={countdownState?.completedAtTimestamps}
       contentContainerStyle={styles.contentContainer}
       style={styles.flatList}
-      ListHeaderComponent={
+      ListEmptyComponent={
         <View style={styles.listEmptyContainer}>
           <Text style={styles.emptyText}>No updates yet</Text>
         </View>
@@ -60,6 +60,7 @@ const styles = StyleSheet.create({
   listItemText: {
     fontSize: 16,
     fontWeight: "bold",
+    textAlign: "center",
   },
   emptyText: {
     fontSize: 16,
