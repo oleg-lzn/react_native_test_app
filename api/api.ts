@@ -1,9 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Простая локальная аутентификация
+// Я не стал делать никаких серверов здесь, никаких бэкендов,
+// это базовая НЕСЕКЬЮРНАЯ, НЕСЕРЬЕЗНАЯ аутентификация.
+// В реальности делается все через node.js, serverless postgres бд типа neon, либо mongo либо supabase
+//  и нормальный JWT с созданием токена и его валидацией.
 export async function signin(email: string, password: string) {
   try {
-    // Простая проверка логина и пароля
     if (email === "admin" && password === "1234") {
       const authData = {
         token: "authenticated",
@@ -33,7 +35,6 @@ export async function signin(email: string, password: string) {
   }
 }
 
-// Проверка аутентификации
 export async function checkAuth() {
   try {
     const authData = await AsyncStorage.getItem("auth_token");
@@ -44,7 +45,6 @@ export async function checkAuth() {
   }
 }
 
-// Выход
 export async function logout() {
   try {
     await AsyncStorage.removeItem("auth_token");

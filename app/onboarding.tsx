@@ -21,7 +21,13 @@ export default function OnboardingScreen() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  // Это супер базовая версия онбординга, обычно онбординг не делается для логина
+  // Обычно онбординг делается для того, чтобы пользователь понял, как работает приложение, и как его использовать.
+  // Я не стал усложнять логику входа, несколько экранов, поэтому auth на онбордине прямо.
+  // Данные для входа захардкожены прямо внизу.
+
   const handleSignIn = async () => {
+    // здесь нужна нормальная валидация
     if (!email || !password) {
       Alert.alert("Ошибка", "Пожалуйста, заполните все поля");
       return;
@@ -56,11 +62,6 @@ export default function OnboardingScreen() {
         style={styles.content}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.header}>
-          <Text style={styles.heading}>Taskly</Text>
-          <Text style={styles.tagline}>Manage your tasks</Text>
-        </View>
-
         <View style={styles.form}>
           <TextInput
             style={styles.input}
@@ -94,7 +95,6 @@ export default function OnboardingScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-
         <View style={styles.credentials}>
           <Text style={styles.credentialsTitle}>Тестовые данные:</Text>
           <Text style={styles.credentialsText}>Логин: admin</Text>
