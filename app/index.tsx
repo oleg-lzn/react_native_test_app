@@ -5,15 +5,21 @@ import {
   Text,
   View,
   LayoutAnimation,
+  TouchableOpacity,
+  Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { theme } from "../theme";
-import ShoppingListItem from "../components/ShoppingListItem";
+import TaskListItem from "../components/TaskListItem";
 import { useState, useCallback, useEffect } from "react";
 import uuid from "react-native-uuid";
 import { getFromStorage, saveToStorage } from "../utils/asyncstorage";
+import { logout } from "../api/api";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
+import { Feather } from "@expo/vector-icons";
 
-type ShoppingListItemType = {
+type TaskListType = {
   id: string;
   name: string;
   isCompleted: boolean;
@@ -21,72 +27,95 @@ type ShoppingListItemType = {
   lastUpdatedTimestamp?: number;
 };
 
-const STORAGE_KEY = "shopping-list";
+const STORAGE_KEY = "task-list";
 
 export default function App() {
   const [value, setValue] = useState<string>("");
-  const [shoppingListItems, setShoppingListItems] =
-    useState<ShoppingListItemType[]>(initialItems);
+  const [tasks, setTasks] = useState<TaskListType[]>(initialItems);
+
+  const handleLogout = async () => {
+    Alert.alert("Выход", "Вы уверены, что хотите выйти?", [
+      {
+        text: "Отмена",
+        style: "cancel",
+      },
+      {
+        text: "Выйти",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const result = await logout();
+            if (result.success) {
+              router.replace("/onboarding");
+            } else {
+              Alert.alert("Ошибка", result.error || "Ошибка при выходе");
+            }
+          } catch (error) {
+            console.error("Logout error:", error);
+            Alert.alert("Ошибка", "Ошибка при выходе");
+          }
+        },
+      },
+    ]);
+  };
 
   useEffect(() => {
-    const fetchShoppingList = async () => {
-      const data = await getFromStorage<ShoppingListItemType[]>(STORAGE_KEY);
+    const fetchTaskList = async () => {
+      const data = await getFromStorage<TaskListType[]>(STORAGE_KEY);
       if (data) {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setShoppingListItems(data);
+        setTasks(data);
       }
     };
-    fetchShoppingList();
+    fetchTaskList();
   }, []);
 
   const handleSubmit = useCallback(() => {
     if (value) {
-      const newShoppingList = [
-        {
-          id: uuid.v4() as string,
-          name: value,
-          isCompleted: false,
-          lastUpdatedTimestamp: Date.now(),
-        },
-        ...shoppingListItems,
-      ];
+      const newTask = {
+        id: uuid.v4() as string,
+        name: value,
+        isCompleted: false,
+        lastUpdatedTimestamp: Date.now(),
+      };
+
+      const updatedTasks = [...tasks, newTask];
+      setTasks(updatedTasks);
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-      setShoppingListItems(newShoppingList);
-      saveToStorage(STORAGE_KEY, newShoppingList);
+      saveToStorage(STORAGE_KEY, updatedTasks);
       setValue("");
     }
-  }, [value, shoppingListItems]);
+  }, [value, tasks]);
 
   const handleDelete = useCallback(
     (id: string) => {
-      const newShoppingList = shoppingListItems.filter(item => item.id !== id);
+      const newShoppingList = tasks.filter(item => item.id !== id);
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      setShoppingListItems(newShoppingList);
+      setTasks(newShoppingList);
       saveToStorage(STORAGE_KEY, newShoppingList);
     },
-    [shoppingListItems]
+    [tasks]
   );
 
   const handleUpdate = useCallback(
     (id: string, name: string) => {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setShoppingListItems(prevItem =>
-        prevItem.map(item =>
-          item.id === id
-            ? { ...item, name, lastUpdatedTimestamp: Date.now() }
-            : item
-        )
+      const updatedTasks = tasks.map(item =>
+        item.id === id
+          ? { ...item, name, lastUpdatedTimestamp: Date.now() }
+          : item
       );
-      saveToStorage(STORAGE_KEY, shoppingListItems);
+      setTasks(updatedTasks);
+      saveToStorage(STORAGE_KEY, updatedTasks);
     },
-    [shoppingListItems]
+    [tasks]
   );
 
   const handleToggleComplete = useCallback(
     (id: string) => {
-      const newShoppingList = shoppingListItems.map(item => {
+      const newShoppingList = tasks.map(item => {
         if (item.id === id) {
           if (item.completedAtTimestamp) {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -104,54 +133,69 @@ export default function App() {
         return item;
       });
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setShoppingListItems(newShoppingList);
+      setTasks(newShoppingList);
       saveToStorage(STORAGE_KEY, newShoppingList);
     },
-    [shoppingListItems]
+    [tasks]
   );
 
   return (
-    <FlatList
-      data={orderShoppingList(shoppingListItems)}
-      stickyHeaderIndices={[0]}
-      ListEmptyComponent={
-        <View style={styles.emptyContainer}>
-          <Text>Your Shopping List is Empty</Text>
-        </View>
-      }
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      ListHeaderComponent={
-        <TextInput
-          style={styles.textInput}
-          placeholder="Add an item"
-          value={value}
-          onChangeText={(e: string) => setValue(e)}
-          keyboardType="default"
-          returnKeyType="done"
-          onSubmitEditing={() => {
-            console.log("submitting", value);
-            handleSubmit();
-          }}
-        />
-      }
-      renderItem={({ item }) => (
-        <ShoppingListItem
-          id={item.id}
-          name={item.name}
-          isCompleted={Boolean(item.completedAtTimestamp)}
-          handleDelete={handleDelete}
-          handleUpdate={handleUpdate}
-          onToggleComplete={handleToggleComplete}
-        />
-      )}
-    />
+    <SafeAreaView style={styles.safeArea}>
+      <FlatList
+        data={orderTaskList(tasks)}
+        stickyHeaderIndices={[0]}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text>Your Task List is Empty</Text>
+          </View>
+        }
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        ListHeaderComponent={
+          <View>
+            <View style={styles.header}>
+              <TouchableOpacity
+                onPress={handleLogout}
+                style={styles.logoutButton}
+                hitSlop={10}
+                activeOpacity={0.8}
+              >
+                <Feather name="log-out" size={24} color={theme.colorCerulean} />
+                <Text style={styles.logoutText}>Log out</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Add an item"
+              value={value}
+              onChangeText={(e: string) => setValue(e)}
+              keyboardType="default"
+              returnKeyType="done"
+              onSubmitEditing={() => {
+                console.log("submitting", value);
+                handleSubmit();
+              }}
+            />
+          </View>
+        }
+        renderItem={({ item }) => (
+          <TaskListItem
+            id={item.id}
+            name={item.name}
+            isCompleted={Boolean(item.completedAtTimestamp)}
+            handleDelete={handleDelete}
+            handleUpdate={handleUpdate}
+            onToggleComplete={handleToggleComplete}
+          />
+        )}
+      />
+    </SafeAreaView>
   );
 }
 
-const initialItems: ShoppingListItemType[] = [];
+const initialItems: TaskListType[] = [];
 
-function orderShoppingList(shoppingList: ShoppingListItemType[]) {
+function orderTaskList(shoppingList: TaskListType[]) {
   return shoppingList.sort((item1, item2) => {
     if (item1.completedAtTimestamp && item2.completedAtTimestamp) {
       return item2.completedAtTimestamp - item1.completedAtTimestamp;
@@ -176,15 +220,39 @@ function orderShoppingList(shoppingList: ShoppingListItemType[]) {
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: theme.colorWhite,
+  },
   container: {
     flex: 1,
     backgroundColor: theme.colorWhite,
-    paddingVertical: 12,
   },
   emptyContainer: {
     justifyContent: "center",
     alignItems: "center",
     marginVertical: 18,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingTop: 16,
+    marginBottom: 8,
+    backgroundColor: theme.colorWhite,
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: theme.colorCerulean,
+    marginLeft: 6,
+  },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 8,
   },
   textInput: {
     borderWidth: 2,

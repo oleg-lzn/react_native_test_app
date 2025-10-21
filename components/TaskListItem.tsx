@@ -21,7 +21,7 @@ type Props = {
   onToggleComplete: (id: string) => void;
 };
 
-export default function ShoppingListItem({
+export default function TaskListItem({
   id,
   name,
   isCompleted,
